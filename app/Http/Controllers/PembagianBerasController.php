@@ -22,6 +22,39 @@ class PembagianBerasController extends Controller
         return sprintf('%s%s%s', $prefix, $yearMonth, $sequenceSuffix);
     }
 
+    private function noPenerimaanPrefix(): string
+    {
+        return DB::table('config')->where('id', 7)->value('value') ?? 'PB';
+    }
+
+    private function currentNoPenerimaanSequence(): int
+    {
+        $rawSequence = DB::table('config')->where('id', 8)->value('value') ?? '0000';
+
+        return (int) preg_replace('/\D/', '', (string) $rawSequence);
+    }
+
+    private function nextNoPenerimaanSequence(): int
+    {
+        return $this->currentNoPenerimaanSequence() + 1;
+    }
+
+    private function syncNoPenerimaanSequence(int $sequenceNumber): void
+    {
+        $sequenceSuffix = substr(str_pad((string) max($sequenceNumber, 0), 4, '0', STR_PAD_LEFT), -4);
+
+        DB::table('config')->where('id', 8)->update(['value' => $sequenceSuffix]);
+    }
+
+    private function nextAvailableNoPenerimaan(?Carbon $tanggalTerima): string
+    {
+        return $this->buildNoPenerimaan(
+            $this->noPenerimaanPrefix(),
+            $tanggalTerima,
+            $this->nextNoPenerimaanSequence()
+        );
+    }
+
     private function nextAvailableSortingNumber(int $terimaBbId): int
     {
         $usedSortings = ReportTimbangBeras::query()
@@ -70,11 +103,8 @@ class PembagianBerasController extends Controller
             ->orderBy('posttime', 'desc')
             ->get();
 
-        $noPenerimaanPrefix = DB::table('config')->where('id', 7)->value('value') ?? 'PB';
-        $rawSequence = DB::table('config')->where('id', 8)->value('value') ?? '0000';
-        $sequenceNumber = ((int) preg_replace('/\D/', '', (string) $rawSequence)) + 1;
         $tanggalTerima = filled($terimaBb->tgl_terima) ? Carbon::parse($terimaBb->tgl_terima) : null;
-        $noPenerimaan = $this->buildNoPenerimaan($noPenerimaanPrefix, $tanggalTerima, $sequenceNumber);
+        $noPenerimaan = $this->nextAvailableNoPenerimaan($tanggalTerima);
 
         $jenisBahan = strtolower(trim($terimaBb->jenis_bahan ?? ''));
         $varietas = 'Beras Putih';
@@ -167,13 +197,10 @@ class PembagianBerasController extends Controller
                 Log::info('Edit mode', ['no_penerimaan' => $noPenerimaan, 'sorting_number' => $validated['editing_sorting_number']]);
             } else {
                 // Create mode - generate new no penerimaan
-                $noPenerimaanPrefix = DB::table('config')->where('id', 7)->value('value') ?? 'PB';
-                $rawSequence = DB::table('config')->where('id', 8)->value('value') ?? '0000';
-                $sequenceNumber = ((int) preg_replace('/\D/', '', (string) $rawSequence)) + 1;
                 $tanggalTerima = filled($terimaBb->tgl_terima) ? Carbon::parse($terimaBb->tgl_terima) : null;
-                $noPenerimaan = $this->buildNoPenerimaan($noPenerimaanPrefix, $tanggalTerima, $sequenceNumber);
+                $noPenerimaan = $this->nextAvailableNoPenerimaan($tanggalTerima);
                 
-                Log::info('No Penerimaan generated', ['no_penerimaan' => $noPenerimaan, 'sequence' => $sequenceNumber]);
+                Log::info('No Penerimaan generated', ['no_penerimaan' => $noPenerimaan]);
             }
 
             $jenisBahan = strtolower(trim($terimaBb->jenis_bahan ?? ''));
@@ -238,6 +265,9 @@ class PembagianBerasController extends Controller
                             'no_penerimaan' => '',
                             'ket_bagian' => '',
                         ]);
+
+                        $currentSequence = $this->currentNoPenerimaanSequence();
+                        $this->syncNoPenerimaanSequence(max($currentSequence - 1, 0));
                     });
 
                     return response()->json([
@@ -246,7 +276,7 @@ class PembagianBerasController extends Controller
                         'data' => [
                             'pembagian' => null,
                             'no_penerimaan' => $noPenerimaan,
-                            'next_no_penerimaan' => $nextNoPenerimaan,
+                            'next_no_penerimaan' => $this->nextAvailableNoPenerimaan($terimaBb->tgl_terima ? Carbon::parse($terimaBb->tgl_terima) : null),
                             'next_sorting' => $this->nextAvailableSortingNumber($terimaBb->id),
                         ],
                     ]);
@@ -271,16 +301,11 @@ class PembagianBerasController extends Controller
                 $userName
             ) {
                 Log::info('Starting database transaction', ['is_edit' => $isEdit]);
-                
-                if (!$isEdit) {
-                    // Create mode - increment sequence
-                    $rawSequence = DB::table('config')->where('id', 8)->value('value') ?? '0000';
-                    $sequenceNumber = ((int) preg_replace('/\D/', '', (string) $rawSequence)) + 1;
-                    $sequenceSuffix = substr(str_pad((string) $sequenceNumber, 4, '0', STR_PAD_LEFT), -4);
-                    DB::table('config')->where('id', 8)->update(['value' => $sequenceSuffix]);
-                    Log::info('Config updated for create');
-                }
 
+                if (!$isEdit) {
+                    $this->syncNoPenerimaanSequence($this->nextNoPenerimaanSequence());
+                }
+                
                 $dataToSave = [
                     'no_penerimaan' => $noPenerimaan,
                     'tanggal' => $terimaBb->tgl_terima,
@@ -412,15 +437,8 @@ class PembagianBerasController extends Controller
             
             Log::info('Transaction completed successfully');
 
-            $currentSequence = (int) preg_replace(
-                '/\D/',
-                '',
-                (string) DB::table('config')->where('id', 8)->value('value')
-            );
-            $nextNoPenerimaan = $this->buildNoPenerimaan(
-                DB::table('config')->where('id', 7)->value('value') ?? 'PB',
-                $terimaBb->tgl_terima ? Carbon::parse($terimaBb->tgl_terima) : null,
-                $currentSequence + 1
+            $nextNoPenerimaan = $this->nextAvailableNoPenerimaan(
+                $terimaBb->tgl_terima ? Carbon::parse($terimaBb->tgl_terima) : null
             );
 
             // Return JSON response for AJAX

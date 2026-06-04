@@ -731,7 +731,7 @@
                             if (data.data.next_sorting) {
                                 availableNextSorting = data.data.next_sorting;
                             }
-                            if (data.data.next_no_penerimaan && !document.getElementById('editing_sorting_number').value) {
+                            if (data.data.next_no_penerimaan) {
                                 availableNoPenerimaan = data.data.next_no_penerimaan;
                             }
                             document.getElementById('no-penerimaan-display').value = availableNoPenerimaan || initialNoPenerimaan;
