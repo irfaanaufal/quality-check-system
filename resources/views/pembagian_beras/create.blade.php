@@ -34,6 +34,33 @@
     @endphp
 
     <style>
+        @media (max-width: 640px) {
+            .pembagian-page-title {
+                font-size: 1rem;
+            }
+
+            .pembagian-card-header {
+                padding-left: 1rem;
+                padding-right: 1rem;
+                padding-top: 0.875rem;
+                padding-bottom: 0.875rem;
+            }
+
+            .pembagian-form-body {
+                padding: 1rem;
+            }
+
+            .pembagian-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .pembagian-actions button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
             -webkit-appearance: none;
@@ -63,11 +90,11 @@
     <div id="notification-container" class="px-4 sm:px-5 mb-4"></div>
 
     <div class="px-3 py-4 sm:px-4 lg:px-5">
-        <div class="grid grid-cols-1 gap-6 items-start xl:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2 xl:gap-6 items-start">
             <!-- Table Section -->
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl xl:sticky xl:top-4">
-                <div class="border-b border-slate-200 bg-gradient-to-r from-emerald-600 to-teal-700 px-5 py-4">
-                    <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                <div class="pembagian-card-header border-b border-slate-200 bg-gradient-to-r from-emerald-600 to-teal-700 px-5 py-4">
+                    <h3 class="pembagian-page-title text-base sm:text-lg font-semibold text-white flex flex-wrap items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"></path>
                         </svg>
@@ -75,7 +102,7 @@
                     </h3>
                 </div>
 
-                <div class="max-h-[calc(100vh-220px)] overflow-y-auto overflow-x-hidden" id="rincian-tabel-container">
+                <div class="max-h-[60vh] sm:max-h-[calc(100vh-220px)] overflow-y-auto overflow-x-auto" id="rincian-tabel-container">
                     @include('pembagian_beras._rincian_tabel', [
                         'groupedData' => $groupedData,
                         'unsortedData' => $unsortedData,
@@ -83,9 +110,9 @@
                 </div>
 
                 <div class="p-4 bg-emerald-50 border-t border-emerald-100">
-                    <div class="flex items-center justify-between text-sm">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm">
                         <span class="font-semibold text-emerald-800">Total Keseluruhan:</span>
-                        <div class="flex gap-6">
+                        <div class="flex flex-col sm:flex-row gap-1 sm:gap-6">
                             <span class="text-emerald-700"><strong id="total-karung-display">{{ number_format($totalKarung, 0, ',', '.') }}</strong> Karung</span>
                             <span class="text-emerald-700"><strong id="total-tonase-display">{{ number_format($totalTonase, 0, ',', '.') }}</strong> Kg</span>
                         </div>
@@ -95,8 +122,8 @@
 
             <!-- Form Section -->
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                <div class="border-b border-slate-200 bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4">
-                    <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                <div class="pembagian-card-header border-b border-slate-200 bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4">
+                    <h3 class="pembagian-page-title text-base sm:text-lg font-semibold text-white flex flex-wrap items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
@@ -104,7 +131,7 @@
                     </h3>
                 </div>
 
-                <form id="pembagian-form" class="p-5">
+                <form id="pembagian-form" class="pembagian-form-body p-5">
                     @csrf
                     <input type="hidden" name="terima_bb_id" value="{{ $terimaBb->id }}" />
                     <input type="hidden" name="editing_sorting_number" id="editing_sorting_number" value="" />
@@ -118,7 +145,7 @@
                             </svg>
                             Informasi Dasar
                         </h4>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">No Penerimaan</label>
                                 <input type="text" id="no-penerimaan-display" value="{{ $noPenerimaan ?? '-' }}" disabled class="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-slate-700" />
@@ -162,10 +189,10 @@
                             </svg>
                             Kualitas Beras
                         </h4>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">Warna</label>
-                                <select name="warna" id="warna" class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">
+                                <select name="warna" id="warna" required class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">
                                     <option value="">Pilih Warna</option>
                                     @foreach ($warnaOptions as $option)
                                         <option value="{{ $option->id }}" {{ old('warna') == $option->id ? 'selected' : '' }}>{{ $option->kriteria }}</option>
@@ -174,7 +201,7 @@
                             </div>
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">Aroma</label>
-                                <select name="aroma_beras" id="aroma_beras" class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">
+                                <select name="aroma_beras" id="aroma_beras" required class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">
                                     <option value="">Pilih Aroma</option>
                                     @foreach ($aromaOptions as $option)
                                         <option value="{{ $option->id }}" {{ old('aroma_beras') == $option->id ? 'selected' : '' }}>{{ $option->kriteria }}</option>
@@ -183,7 +210,7 @@
                             </div>
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">Kondisi Umum</label>
-                                <select name="kondisi_umum" id="kondisi_umum" class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">
+                                <select name="kondisi_umum" id="kondisi_umum" required class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">
                                     <option value="">Pilih Kondisi Umum</option>
                                     <option value="Kering" {{ old('kondisi_umum') == 'Kering' ? 'selected' : '' }}>Kering</option>
                                     <option value="Basah" {{ old('kondisi_umum') == 'Basah' ? 'selected' : '' }}>Basah</option>
@@ -192,7 +219,7 @@
                             </div>
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">Kondisi Kendaraan</label>
-                                <select name="kondisi_kendaraan" id="kondisi_kendaraan" class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">
+                                <select name="kondisi_kendaraan" id="kondisi_kendaraan" required class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">
                                     <option value="">Pilih Kondisi Kendaraan</option>
                                     <option value="Baik" {{ old('kondisi_kendaraan') == 'Baik' ? 'selected' : '' }}>Baik</option>
                                     <option value="Cukup Baik" {{ old('kondisi_kendaraan') == 'Cukup Baik' ? 'selected' : '' }}>Cukup Baik</option>
@@ -201,7 +228,7 @@
                             </div>
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">Keputusan Penerimaan</label>
-                                <select name="keputusan_penerimaan" id="keputusan_penerimaan" class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">
+                                <select name="keputusan_penerimaan" id="keputusan_penerimaan" required class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">
                                     <option value="">Pilih Keputusan</option>
                                     <option value="Diterima" {{ old('keputusan_penerimaan') == 'Diterima' ? 'selected' : '' }}>Diterima</option>
                                     <option value="Ditolak" {{ old('keputusan_penerimaan') == 'Ditolak' ? 'selected' : '' }}>Ditolak</option>
@@ -209,7 +236,7 @@
                             </div>
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">Sorter Beras</label>
-                                <select name="sorter_beras" id="sorter_beras" class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">
+                                <select name="sorter_beras" id="sorter_beras" required class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">
                                     <option value="">Pilih Sorter Beras</option>
                                     <option value="Ya" {{ old('sorter_beras') == 'Ya' ? 'selected' : '' }}>Ya</option>
                                     <option value="Tidak" {{ old('sorter_beras') == 'Tidak' ? 'selected' : '' }}>Tidak</option>
@@ -229,15 +256,15 @@
                         <div class="grid grid-cols-1 gap-4">
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">Indikasi Kimia</label>
-                                <input name="indikasi_kimia" id="indikasi_kimia" type="text" value="{{ old('indikasi_kimia') }}" class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors" placeholder="Tuliskan indikasi kimia" />
+                                <input name="indikasi_kimia" id="indikasi_kimia" type="text" value="{{ old('indikasi_kimia') }}" required class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors" placeholder="Tuliskan indikasi kimia" />
                             </div>
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">Catatan Cek</label>
-                                <input name="catatan_cek" id="catatan_cek" type="text" value="{{ old('catatan_cek') }}" class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors" placeholder="Tuliskan catatan cek" />
+                                <input name="catatan_cek" id="catatan_cek" type="text" value="{{ old('catatan_cek') }}" required class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors" placeholder="Tuliskan catatan cek" />
                             </div>
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">Keterangan Penerimaan</label>
-                                <textarea name="keterangan_penerimaan" id="keterangan_penerimaan" rows="3" class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">{{ old('keterangan_penerimaan') }}</textarea>
+                                <textarea name="keterangan_penerimaan" id="keterangan_penerimaan" rows="3" required class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors">{{ old('keterangan_penerimaan') }}</textarea>
                             </div>
                         </div>
                     </div>
@@ -250,10 +277,10 @@
                             </svg>
                             Detail Transaksi
                         </h4>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">Pembagian Ke</label>
-                                <input name="pembagian_ke" id="pembagian_ke" type="text" value="{{ old('pembagian_ke', $nextSorting ?? '') }}" class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors" placeholder="Nomor pembagian beras" />
+                                <input name="pembagian_ke" id="pembagian_ke" type="text" value="{{ old('pembagian_ke', $nextSorting ?? '') }}" required class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors" placeholder="Nomor pembagian beras" />
                             </div>
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">Harga</label>
@@ -277,7 +304,7 @@
                     </div>
 
                     <!-- Tombol -->
-                    <div class="flex items-center gap-3 pt-4 border-t border-slate-200">
+                    <div class="pembagian-actions flex items-center gap-3 pt-4 border-t border-slate-200">
                         <button type="submit" id="submit-btn" class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-700 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:from-emerald-700 hover:to-teal-800 active:scale-95">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -461,18 +488,18 @@
                         const isEditableGroup = activeEditingSortingNumber && String(activeEditingSortingNumber) === String(sorting);
                         
                         html += `
-                            <table class="min-w-full text-sm mb-4 sorting-group-table" data-sorting-number="${sorting}">
+                            <table class="min-w-[820px] w-full text-sm mb-4 sorting-group-table" data-sorting-number="${sorting}">
                                 <thead>
                                     <tr class="sorting-group-header cursor-pointer hover:bg-emerald-100 transition-colors" data-sorting-number="${sorting}">
                                         <th colspan="8" class="border-b border-slate-200 px-4 py-3 text-left text-emerald-800">
-                                            <div class="flex items-center justify-between">
-                                                <span class="flex items-center gap-2">
+                                            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                <span class="flex flex-wrap items-center gap-2">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002-2h2a2 2 0 002-2"></path>
                                                     </svg>
                                                     Sorting Ke-${sorting} <span class="text-xs text-emerald-600">(klik untuk edit)</span>
                                                 </span>
-                                                <span class="text-sm">
+                                                <span class="text-xs sm:text-sm">
                                                     Total: ${formatNumber(groupTotalKarung)} Karung, ${formatNumber(groupTotalTonase)} Kg
                                                 </span>
                                             </div>
@@ -486,7 +513,7 @@
                                         <th class="border-b border-slate-200 px-2 py-3 text-center font-semibold text-slate-700 w-28">Tonase</th>
                                         <th class="border-b border-slate-200 px-2 py-3 text-center font-semibold text-slate-700 w-16">Kadar Air</th>
                                         <th class="border-b border-slate-200 px-2 py-3 text-center font-semibold text-slate-700 w-16">Kadar Broken</th>
-                                        <th class="border-b border-slate-200 px-2 py-3 text-center font-semibold text-slate-700 w-28">Status</th>
+                                        <th class="border-b border-slate-200 px-2 py-3 text-center font-semibold text-slate-700 w-24">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -526,7 +553,7 @@
                     // Render unsorted data
                     if (data.data.unsorted && data.data.unsorted.length > 0) {
                         html += `
-                            <table class="min-w-full text-sm">
+                            <table class="min-w-[820px] w-full text-sm">
                                 <thead>
                                     <tr class="bg-slate-50">
                                         <th class="border-b border-slate-200 px-2 py-3 text-center font-semibold text-slate-700 w-12">No</th>
@@ -536,10 +563,10 @@
                                         <th class="border-b border-slate-200 px-2 py-3 text-center font-semibold text-slate-700 w-28">Tonase</th>
                                         <th class="border-b border-slate-200 px-2 py-3 text-center font-semibold text-slate-700 w-16">Kadar Air</th>
                                         <th class="border-b border-slate-200 px-2 py-3 text-center font-semibold text-slate-700 w-16">Kadar Broken</th>
-                                        <th class="border-b border-slate-200 px-2 py-3 text-center font-semibold text-slate-700 w-20">
-                                            <label class="flex items-center justify-center gap-2 cursor-pointer">
+                                        <th class="border-b border-slate-200 px-2 py-3 text-center font-semibold text-slate-700 w-24">
+                                            <label class="flex flex-col items-center justify-center gap-1 cursor-pointer sm:flex-row sm:gap-2">
                                                 <input type="checkbox" id="selectAll" class="w-5 h-5 text-emerald-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2">
-                                                <span>Pilih Semua</span>
+                                                <span class="text-xs sm:text-sm">Pilih Semua</span>
                                             </label>
                                         </th>
                                     </tr>

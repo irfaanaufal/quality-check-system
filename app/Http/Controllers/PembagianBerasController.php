@@ -162,25 +162,36 @@ class PembagianBerasController extends Controller
         Log::info('Pembagian Beras store request received', $request->all());
         
         try {
-            $validated = $request->validate([
+            $isEditRequest = $request->filled('editing_sorting_number');
+
+            $rules = [
                 'terima_bb_id' => ['required', 'integer', 'exists:terima_bb,id'],
-                'kondisi_umum' => ['nullable', 'string', 'max:255'],
-                'kondisi_kendaraan' => ['nullable', 'string', 'max:255'],
-                'keputusan_penerimaan' => ['nullable', 'string', 'max:255'],
-                'sorter_beras' => ['nullable', 'in:Ya,Tidak'],
-                'warna' => ['nullable', 'integer', 'exists:kriteria_bb,id'],
-                'aroma_beras' => ['nullable', 'integer', 'exists:kriteria_bb,id'],
-                'indikasi_kimia' => ['nullable', 'string', 'max:255'],
-                'catatan_cek' => ['nullable', 'string', 'max:255'],
-                'keterangan_penerimaan' => ['nullable', 'string', 'max:1000'],
-                'pembagian_ke' => ['nullable', 'string', 'max:255'],
+                'kondisi_umum' => ['required', 'string', 'max:255'],
+                'kondisi_kendaraan' => ['required', 'string', 'max:255'],
+                'keputusan_penerimaan' => ['required', 'string', 'max:255'],
+                'sorter_beras' => ['required', 'in:Ya,Tidak'],
+                'warna' => ['required', 'integer', 'exists:kriteria_bb,id'],
+                'aroma_beras' => ['required', 'integer', 'exists:kriteria_bb,id'],
+                'indikasi_kimia' => ['required', 'string', 'max:255'],
+                'catatan_cek' => ['required', 'string', 'max:255'],
+                'keterangan_penerimaan' => ['required', 'string', 'max:1000'],
+                'pembagian_ke' => ['required', 'integer', 'min:1'],
                 'harga' => ['nullable', 'numeric', 'min:0'],
-                'total_qty_terpilih' => ['nullable', 'numeric', 'min:0'],
-                'selected_rows' => ['nullable', 'array'],
-                'selected_rows.*' => ['integer', 'exists:report_timbang_beras,id'],
                 'editing_sorting_number' => ['nullable', 'integer', 'min:1'],
                 'editing_no_penerimaan' => ['nullable', 'string', 'max:255'],
-            ]);
+            ];
+
+            if ($isEditRequest) {
+                $rules['total_qty_terpilih'] = ['nullable', 'numeric', 'min:0'];
+                $rules['selected_rows'] = ['nullable', 'array'];
+                $rules['selected_rows.*'] = ['integer', 'exists:report_timbang_beras,id'];
+            } else {
+                $rules['total_qty_terpilih'] = ['required', 'numeric', 'gt:0'];
+                $rules['selected_rows'] = ['required', 'array', 'min:1'];
+                $rules['selected_rows.*'] = ['integer', 'exists:report_timbang_beras,id'];
+            }
+
+            $validated = $request->validate($rules);
             
             Log::info('Validation passed', $validated);
 
@@ -225,13 +236,18 @@ class PembagianBerasController extends Controller
             $savedPembagian = null;
             $existingNoPenerimaan = $validated['editing_no_penerimaan'] ?? $noPenerimaan;
             $nextNoPenerimaan = $noPenerimaan;
+            $updatedAt = Carbon::now();
+            $reportLastAction = 'Pembagian Timbangan';
+            $selectedRowIds = array_map('intval', $validated['selected_rows'] ?? []);
 
             if (empty($validated['selected_rows'])) {
                 if ($isEdit) {
                     DB::transaction(function () use (
                         $terimaBb,
                         $existingNoPenerimaan,
-                        $validated
+                        $validated,
+                        $userName,
+                        $updatedAt
                     ) {
                         $sortingNumber = $validated['editing_sorting_number'];
                         $pembagianToDeleteQuery = Beras::query()
@@ -264,6 +280,8 @@ class PembagianBerasController extends Controller
                             'sorting' => 0,
                             'no_penerimaan' => '',
                             'ket_bagian' => '',
+                            'user_updated' => $userName,
+                            'updated_at' => $updatedAt,
                         ]);
 
                         $currentSequence = $this->currentNoPenerimaanSequence();
@@ -298,7 +316,10 @@ class PembagianBerasController extends Controller
                 $kodePrincipal,
                 $warnaId,
                 $aromaId,
-                $userName
+                $userName,
+                $updatedAt,
+                $reportLastAction,
+                $selectedRowIds
             ) {
                 Log::info('Starting database transaction', ['is_edit' => $isEdit]);
 
@@ -417,6 +438,8 @@ class PembagianBerasController extends Controller
                         'sorting' => 0,
                         'no_penerimaan' => '',
                         'ket_bagian' => '',
+                        'user_updated' => $userName,
+                        'updated_at' => $updatedAt,
                     ]);
                 }
 
@@ -429,10 +452,48 @@ class PembagianBerasController extends Controller
                             'sorting' => $sortingNumberToUse,
                             'no_penerimaan' => $noPenerimaanToUse,
                             'ket_bagian' => $validated['keterangan_penerimaan'] ?? '',
+                            'user_updated' => $userName,
+                            'updated_at' => $updatedAt,
+                            'last_action' => $reportLastAction,
                         ]);
                         
                     Log::info('Selected rows updated');
+
+                    if ($isEdit) {
+                        ReportTimbangBeras::query()
+                            ->where('id_bahan', (string) $terimaBb->id)
+                            ->where(function ($query) use ($existingNoPenerimaan, $sortingNumberToUse) {
+                                if (filled($existingNoPenerimaan)) {
+                                    $query->where('no_penerimaan', $existingNoPenerimaan);
+                                } else {
+                                    $query->where('sorting', $sortingNumberToUse);
+                                }
+                            })
+                            ->whereNotIn('id', $selectedRowIds)
+                            ->update([
+                                'sorting' => 0,
+                                'no_penerimaan' => '',
+                                'ket_bagian' => '',
+                                'user_updated' => $userName,
+                                'updated_at' => $updatedAt,
+                            ]);
+                    }
                 }
+
+                ReportTimbangBeras::query()
+                    ->where('id_bahan', (string) $terimaBb->id)
+                    ->where('sorting', 0)
+                    ->where(function ($query) {
+                        $query->whereNull('no_penerimaan')
+                            ->orWhere('no_penerimaan', '');
+                    })
+                    ->whereNotNull('ket_bagian')
+                    ->where('ket_bagian', '!=', '')
+                    ->update([
+                        'ket_bagian' => '',
+                        'user_updated' => $userName,
+                        'updated_at' => $updatedAt,
+                    ]);
             });
             
             Log::info('Transaction completed successfully');
