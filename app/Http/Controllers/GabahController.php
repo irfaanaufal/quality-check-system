@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Beras;
+use App\Models\Gabah;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class BerasController extends Controller
+class GabahController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Beras::query()->whereIn('status', ['finish', 'approve', 'approved']);
+        $query = Gabah::query()->whereIn('status', ['finish', 'approve', 'approved']);
 
         if ($request->filled('search')) {
             $q = $request->input('search');
@@ -40,10 +40,10 @@ class BerasController extends Controller
             $query->where('tanggal', '<=', $request->input('date_to'));
         }
 
-        $beras = $query->orderBy('idb_beras', 'desc')->paginate(25)->withQueryString();
+        $gabah = $query->orderBy('id', 'desc')->paginate(25)->withQueryString();
 
-        return view('bahan_baku_beras.index', [
-            'beras' => $beras,
+        return view('bahan_baku_gabah.index', [
+            'gabah' => $gabah,
             'filters' => $request->only(['search','status','supplier','jenis','date_from','date_to']),
         ]);
     }
@@ -54,14 +54,14 @@ class BerasController extends Controller
             'harga' => 'required|numeric|min:0',
         ]);
 
-        $beras = Beras::findOrFail($id);
-        $beras->harga = $request->input('harga');
-        $beras->posttime_harga = now();
-        $beras->save();
+        $gabah = Gabah::findOrFail($id);
+        $gabah->harga = $request->input('harga');
+        $gabah->posttime_harga = now();
+        $gabah->save();
 
         // Hitung harga_rata untuk id_timbang yang sama
-        if ($beras->id_timbang) {
-            $relatedRecords = Beras::where('id_timbang', $beras->id_timbang)->get();
+        if ($gabah->id_timbang) {
+            $relatedRecords = Gabah::where('id_timbang', $gabah->id_timbang)->get();
             $totalHarga = 0;
             $countRecords = 0;
             foreach ($relatedRecords as $record) {
@@ -73,7 +73,7 @@ class BerasController extends Controller
             $hargaRata = $countRecords > 0 ? round($totalHarga / $countRecords) : 0;
 
             // Update harga_rata untuk semua record dengan id_timbang tersebut
-            Beras::where('id_timbang', $beras->id_timbang)->update(['harga_rata' => $hargaRata]);
+            Gabah::where('id_timbang', $gabah->id_timbang)->update(['harga_rata' => $hargaRata]);
         }
 
         return redirect()->back()->with('success', 'Harga berhasil diperbarui');
@@ -81,26 +81,26 @@ class BerasController extends Controller
 
     public function print($id)
     {
-        // Ambil beras yang diklik
-        $berasKlik = Beras::findOrFail($id);
+        // Ambil gabah yang diklik
+        $gabahKlik = Gabah::findOrFail($id);
 
         // Ambil semua sorting dalam id_timbang yang sama, urutkan by no_penerimaan
-        $semuaSorting = Beras::where('id_timbang', $berasKlik->id_timbang)
+        $semuaSorting = Gabah::where('id_timbang', $gabahKlik->id_timbang)
             ->orderBy('no_penerimaan', 'asc')
             ->get();
 
-        // Ambil data terima_bb (sama untuk semua sorting)
-        $terimaBb = \App\Models\TerimaBb::find($berasKlik->id_timbang);
-        $tanggal = $terimaBb
-            ? \Illuminate\Support\Carbon::parse($terimaBb->tgl_terima)->format('d/m')
+        // Ambil data terima_bg (sama untuk semua sorting)
+        $terimaBg = \App\Models\TerimaBg::find($gabahKlik->id_timbang);
+        $tanggal = $terimaBg
+            ? \Illuminate\Support\Carbon::parse($terimaBg->tgl_terima)->format('d/m')
             : '';
 
         // Siapkan data per sorting
         $dataSorting = [];
 
-        foreach ($semuaSorting as $beras) {
+        foreach ($semuaSorting as $gabah) {
             // Ambil semua timbangan milik sorting ini (by no_penerimaan)
-            $reportTimbang = \App\Models\ReportTimbangBeras::where('no_penerimaan', $beras->no_penerimaan)
+            $reportTimbang = \App\Models\ReportTimbangGabah::where('no_penerimaan', $gabah->no_penerimaan)
                 ->orderByRaw('CAST(timbang_ke AS UNSIGNED) ASC')
                 ->get();
 
@@ -124,7 +124,7 @@ class BerasController extends Controller
             }
 
             $dataSorting[] = [
-                'beras'         => $beras,
+                'gabah'         => $gabah,
                 'reportTimbang' => $reportTimbang,
                 'selectedKadar' => $selectedKadar,
                 'leftColumn'    => $leftColumn,
@@ -132,10 +132,10 @@ class BerasController extends Controller
             ];
         }
 
-        return view('bahan_baku_beras.print', compact(
+        return view('bahan_baku_gabah.print', compact(
             'dataSorting',
             'tanggal',
-            'terimaBb'
+            'terimaBg'
         ));
     }
 }

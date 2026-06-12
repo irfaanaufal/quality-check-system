@@ -5,10 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Beras extends Model
+class Gabah extends Model
 {
-    protected $table = 'b_beras';
-    protected $primaryKey = 'idb_beras';
+    protected $table = 'b_gabah';
+    protected $primaryKey = 'id';
     public $incrementing = true;
     protected $keyType = 'int';
     public $timestamps = false;
@@ -22,7 +22,7 @@ class Beras extends Model
     ];
 
     protected $casts = [
-        'idb_beras' => 'integer',
+        'id' => 'integer',
         'berat' => 'integer',
         'stok' => 'integer',
         'poles' => 'integer',
@@ -34,12 +34,8 @@ class Beras extends Model
         'harga_rata' => 'integer',
     ];
 
-    /**
-     * Relasi ke tabel report_timbang_beras.
-     * Menghubungkan berdasarkan kolom 'no_penerimaan' yang ada di kedua tabel.
-     */
-    public function reportTimbangBeras(): HasMany
+    public function reportTimbangGabah(): HasMany
     {
-        return $this->hasMany(ReportTimbangBeras::class, 'no_penerimaan', 'no_penerimaan');
+        return $this->hasMany(ReportTimbangGabah::class, 'no_penerimaan', 'no_penerimaan');
     }
 }

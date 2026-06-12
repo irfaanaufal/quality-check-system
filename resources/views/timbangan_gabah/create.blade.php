@@ -10,8 +10,8 @@
     </x-slot>
 
     @php
-        $tanggalTerima = filled($terimaBb->tgl_terima ?? null)
-            ? \Illuminate\Support\Carbon::parse($terimaBb->tgl_terima)
+        $tanggalTerima = filled($terimaBg->tgl_terima ?? null)
+            ? \Illuminate\Support\Carbon::parse($terimaBg->tgl_terima)
             : null;
         $rows = $rows ?? collect();
         $totalTonase = $rows->sum(function ($row) {
@@ -22,11 +22,12 @@
         });
         $currentUsername = strtolower(trim(auth()->user()?->username ?? ''));
         $currentName = strtolower(trim(auth()->user()?->name ?? ''));
-        $userCreated = strtolower(trim($terimaBb->user_created ?? ''));
+        $userCreated = strtolower(trim($terimaBg->user_created ?? ''));
         $isCreator = in_array($userCreated, array_filter([$currentUsername, $currentName]), true);
-        $isApproved = filled($terimaBb->jam_akhir);
-        $isProcessing = strtolower(trim($terimaBb->status ?? '')) === 'proses' || !$isApproved;
+        $isApproved = filled($terimaBg->jam_akhir);
+        $isProcessing = strtolower(trim($terimaBg->status ?? '')) === 'proses' || !$isApproved;
         $isFinished = !$isProcessing;
+        $isReadOnly = !($isProcessing && $isCreator);
     @endphp
 
     <style>
@@ -56,12 +57,12 @@
         <div class="grid grid-cols-1 gap-4 items-start xl:grid-cols-[minmax(0,520px)_minmax(0,1fr)]">
             <div class="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm max-w-full">
                 <div class="border-b border-slate-200 px-4 py-3 text-base font-medium text-slate-700">
-                    Form Proses Penerimaan Beras
+                    Form Proses Penerimaan Gabah
                 </div>
 
-                <form method="POST" action="{{ route('timbangan.store') }}" class="px-4 py-4">
+                <form method="POST" action="{{ route('timbangan-gabah.store') }}" class="px-4 py-4">
                     @csrf
-                    <input type="hidden" name="terima_bb_id" value="{{ $terimaBb->id }}">
+                    <input type="hidden" name="terima_bb_id" value="{{ $terimaBg->id }}">
 
                     <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                         <div>
@@ -71,12 +72,12 @@
 
                         <div>
                             <label class="mb-1 block text-sm font-semibold text-slate-800">Nama Supplier</label>
-                            <input type="text" value="{{ $terimaBb->nama_supplier ?? '-' }}" disabled class="w-full rounded-sm border border-slate-300 bg-slate-100 px-4 py-2.5 text-slate-700 focus:border-blue-500 focus:ring-blue-500">
+                            <input type="text" value="{{ $terimaBg->nama_supplier ?? '-' }}" disabled class="w-full rounded-sm border border-slate-300 bg-slate-100 px-4 py-2.5 text-slate-700 focus:border-blue-500 focus:ring-blue-500">
                         </div>
 
                         <div>
-                            <label class="mb-1 block text-sm font-semibold text-slate-800">Jenis Beras</label>
-                            <input type="text" value="{{ $terimaBb->jenis_bahan ?? '-' }}" disabled class="w-full rounded-sm border border-slate-300 bg-slate-100 px-4 py-2.5 text-slate-700 focus:border-blue-500 focus:ring-blue-500">
+                            <label class="mb-1 block text-sm font-semibold text-slate-800">Jenis Gabah</label>
+                            <input type="text" value="{{ $terimaBg->jenis_bahan ?? '-' }}" disabled class="w-full rounded-sm border border-slate-300 bg-slate-100 px-4 py-2.5 text-slate-700 focus:border-blue-500 focus:ring-blue-500">
                         </div>
 
                         <div>
@@ -86,8 +87,8 @@
 
                         <div>
                             <label class="mb-1 block text-sm font-semibold text-slate-800">Jumlah Karung</label>
-                            <div class="flex overflow-hidden rounded-sm border border-slate-300 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-                                <input name="jumlah_karung" type="number" min="0" step="1" value="{{ old('jumlah_karung') }}" class="w-full border-0 px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-0" placeholder="">
+                            <div class="flex overflow-hidden rounded-sm border border-slate-300 {{ $isReadOnly ? 'bg-slate-100' : 'bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500' }}">
+                                <input name="jumlah_karung" type="number" min="0" step="1" value="{{ old('jumlah_karung') }}" {{ $isReadOnly ? 'disabled' : '' }} class="w-full border-0 px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-0 {{ $isReadOnly ? 'bg-slate-100' : '' }}" placeholder="">
                                 <span class="inline-flex items-center border-l border-slate-300 bg-slate-50 px-3 text-sm italic text-slate-500">Krg</span>
                             </div>
                             @error('jumlah_karung')
@@ -97,8 +98,8 @@
 
                         <div>
                             <label class="mb-1 block text-sm font-semibold text-slate-800">Tonase</label>
-                            <div class="flex overflow-hidden rounded-sm border border-slate-300 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-                                <input name="tonase" type="number" min="0" step="0.001" value="{{ old('tonase') }}" class="w-full border-0 px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-0" placeholder="">
+                            <div class="flex overflow-hidden rounded-sm border border-slate-300 {{ $isReadOnly ? 'bg-slate-100' : 'bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500' }}">
+                                <input name="tonase" type="number" min="0" step="0.001" value="{{ old('tonase') }}" {{ $isReadOnly ? 'disabled' : '' }} class="w-full border-0 px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-0 {{ $isReadOnly ? 'bg-slate-100' : '' }}" placeholder="">
                                 <span class="inline-flex items-center border-l border-slate-300 bg-slate-50 px-3 text-sm italic text-slate-500">Kg</span>
                             </div>
                             @error('tonase')
@@ -106,35 +107,26 @@
                             @enderror
                         </div>
 
-                        <div>
+                        <div class="md:col-span-2">
                             <label class="mb-1 block text-sm font-semibold text-slate-800">Kadar Air</label>
-                            <div class="flex overflow-hidden rounded-sm border border-slate-300 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-                                <input name="kadar_air" type="number" min="0" step="0.01" value="{{ old('kadar_air') }}" class="w-full border-0 px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-0" placeholder="">
+                            <div class="flex overflow-hidden rounded-sm border border-slate-300 {{ $isReadOnly ? 'bg-slate-100' : 'bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500' }}">
+                                <input name="kadar_air" type="number" min="0" step="0.01" value="{{ old('kadar_air') }}" {{ $isReadOnly ? 'disabled' : '' }} class="w-full border-0 px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-0 {{ $isReadOnly ? 'bg-slate-100' : '' }}" placeholder="">
                                 <span class="inline-flex items-center border-l border-slate-300 bg-slate-50 px-3 text-sm italic text-slate-500">%</span>
                             </div>
                             @error('kadar_air')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
-
-                        <div>
-                            <label class="mb-1 block text-sm font-semibold text-slate-800">Kadar Broken</label>
-                            <div class="flex overflow-hidden rounded-sm border border-slate-300 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-                                <input name="kadar_broken" type="number" min="0" step="0.01" value="{{ old('kadar_broken') }}" class="w-full border-0 px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-0" placeholder="">
-                                <span class="inline-flex items-center border-l border-slate-300 bg-slate-50 px-3 text-sm italic text-slate-500">%</span>
-                            </div>
-                            @error('kadar_broken')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
                     </div>
 
                     <div class="mt-6 flex items-center gap-3 border-t border-slate-200 pt-4">
-                        <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700">
-                            Simpan
-                        </button>
-                        <button type="button" onclick="window.location='{{ route('penerimaan_beras.index') }}'" class="inline-flex items-center rounded-md bg-red-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-red-700">
-                            Cancel
+                        @if (!$isReadOnly)
+                            <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700">
+                                Simpan
+                            </button>
+                        @endif
+                        <button type="button" onclick="window.location='{{ route('penerimaan_gabah.index') }}'" class="inline-flex items-center rounded-md bg-red-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-red-700">
+                            {{ $isReadOnly ? 'Kembali' : 'Cancel' }}
                         </button>
                     </div>
                 </form>
@@ -154,7 +146,6 @@
                                 <th class="border border-slate-300 px-3 py-3 text-center font-semibold">Jml Karung</th>
                                 <th class="border border-slate-300 px-3 py-3 text-center font-semibold">Tonase</th>
                                 <th class="border border-slate-300 px-3 py-3 text-center font-semibold">Kadar Air</th>
-                                <th class="border border-slate-300 px-3 py-3 text-center font-semibold">Kadar Broken</th>
                                 <th class="border border-slate-300 px-3 py-3 text-center font-semibold">Aksi</th>
                             </tr>
                         </thead>
@@ -165,18 +156,17 @@
                                     <td class="border border-slate-200 px-3 py-2 text-center">{{ $row->timbang_ke }}</td>
                                     <td class="border border-slate-200 px-3 py-2 text-center">{{ $row->jumlah_karung ?: '-' }}</td>
                                     <td class="border border-slate-200 px-3 py-2 text-center">{{ is_numeric($row->tonase) ? number_format((float) $row->tonase, 0, ',', '.') . ' Kg' : '-' }}</td>
-                                    <td class="border border-slate-200 px-3 py-2 text-center">{{ $row->kadar_air ?: '-' }}</td>
-                                    <td class="border border-slate-200 px-3 py-2 text-center">{{ $row->kadar_broken ?: '-' }}</td>
+                                    <td class="border border-slate-200 px-3 py-2 text-center">{{ $row->kadar_air !== null && $row->kadar_air !== '' ? $row->kadar_air . '%' : '-' }}</td>
                                     <td class="border border-slate-200 px-3 py-2 text-center">
-                                        @if ($isProcessing)
-                                            <!-- Belum selesai: Tampilkan Edit & Hapus -->
+                                        @if (!$isReadOnly)
+                                            <!-- Belum selesai & Pembuat: Tampilkan Edit & Hapus -->
                                             <div class="flex items-center justify-center gap-2 text-gray-500">
-                                                <button type="button" x-data="" x-on:click.prevent="$dispatch('open-modal', 'timbangan-edit-modal-{{ $row->id }}')" class="inline-flex items-center justify-center transition hover:text-amber-600" title="Edit">
+                                                <button type="button" x-data="" x-on:click.prevent="$dispatch('open-modal', 'timbangan-gabah-edit-modal-{{ $row->id }}')" class="inline-flex items-center justify-center transition hover:text-amber-600" title="Edit">
                                                     <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487a2.25 2.25 0 113.182 3.182L7.5 20.213 3 21l.787-4.5L16.862 4.487z" />
                                                     </svg>
                                                 </button>
-                                                <form method="POST" action="{{ route('timbangan.destroy', $row->id) }}" onsubmit="return confirm('Yakin hapus penimbangan ke-{{ $row->timbang_ke }}?');" class="inline-flex m-0 p-0">
+                                                <form method="POST" action="{{ route('timbangan-gabah.destroy', $row->id) }}" onsubmit="return confirm('Yakin hapus penimbangan ke-{{ $row->timbang_ke }}?');" class="inline-flex m-0 p-0">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="inline-flex items-center justify-center transition hover:text-red-600" title="Hapus">
@@ -186,19 +176,24 @@
                                                     </button>
                                                 </form>
                                             </div>
-                                            @include('timbangan.edit', ['timbangan' => $row])
-                                        @elseif ($isFinished)
-                                            <div class="flex items-center justify-center">
-                                                <svg class="h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-                                                </svg>
-                                            </div>
+                                            @include('timbangan_gabah.edit', ['timbangan' => $row])
+                                        @else
+                                            <!-- Read only atau Selesai: Tampilkan indikator check jika selesai -->
+                                            @if ($isFinished)
+                                                <div class="flex items-center justify-center">
+                                                    <svg class="h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                                                    </svg>
+                                                </div>
+                                            @else
+                                                <span class="text-slate-400 font-medium text-xs">Read Only</span>
+                                            @endif
                                         @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="border border-slate-200 px-3 py-8 text-center text-slate-500">
+                                    <td colspan="6" class="border border-slate-200 px-3 py-8 text-center text-slate-500">
                                         Belum ada data penimbangan.
                                     </td>
                                 </tr>
@@ -210,38 +205,50 @@
                                 <td colspan="2" class="border border-slate-200 px-3 py-3 text-center font-semibold text-slate-700">Total Keseluruhan</td>
                                 <td class="border border-slate-200 px-3 py-3 text-center font-semibold text-slate-700">{{ number_format($totalKarung, 0, ',', '.') }} Krg</td>
                                 <td class="border border-slate-200 px-3 py-3 text-center font-semibold text-slate-700">{{ number_format($totalTonase, 0, ',', '.') }} Kg</td>
-                                <td colspan="3" class="border border-slate-200 px-3 py-3 text-center font-semibold text-slate-700"></td>
+                                <td colspan="2" class="border border-slate-200 px-3 py-3 text-center font-semibold text-slate-700"></td>
                             </tr>
                         </tfoot>
                         @endif
                     </table>
-                    </table>
                     @if ($isProcessing)
-                    <form method="POST" action="{{ route('timbangan.selesai_timbang', $terimaBb->id) }}">
-                        @csrf
+                        @if (!$isReadOnly)
+                            <form method="POST" action="{{ route('timbangan-gabah.selesai_timbang', $terimaBg->id) }}">
+                                @csrf
+                                <div class="mt-4">
+                                    <label class="mb-2 block text-sm font-semibold text-slate-800">Keterangan</label>
+                                    <textarea name="keterangan" rows="3" class="w-full rounded-sm border border-slate-300 bg-white px-4 py-2.5 text-slate-700 focus:border-blue-500 focus:ring-blue-500">{{ old('keterangan', $terimaBg->keterangan) }}</textarea>
+                                    @error('keterangan')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div class="mt-4 flex justify-end">
+                                    <button
+                                        type="submit"
+                                        onclick="return confirm('Yakin ingin menyelesaikan data penimbangan ini?')"
+                                        class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700">
+                                        Selesai Timbang
+                                    </button>
+                                </div>
+                            </form>
+                        @else
+                            <div class="mt-4">
+                                <label class="mb-2 block text-sm font-semibold text-slate-800">Keterangan</label>
+                                <textarea name="keterangan" rows="3" disabled class="w-full rounded-sm border border-slate-300 bg-slate-100 px-4 py-2.5 text-slate-700 focus:border-blue-500 focus:ring-blue-500">{{ $terimaBg->keterangan }}</textarea>
+                            </div>
+                        @endif
+                    @elseif ($isFinished)
                         <div class="mt-4">
                             <label class="mb-2 block text-sm font-semibold text-slate-800">Keterangan</label>
-                            <textarea name="keterangan" rows="3" class="w-full rounded-sm border border-slate-300 bg-white px-4 py-2.5 text-slate-700 focus:border-blue-500 focus:ring-blue-500">{{ old('keterangan', $terimaBb->keterangan) }}</textarea>
-                            @error('keterangan')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                            <textarea name="keterangan" rows="3" disabled class="w-full rounded-sm border border-slate-300 bg-slate-100 px-4 py-2.5 text-slate-700 focus:border-blue-500 focus:ring-blue-500">{{ $terimaBg->keterangan }}</textarea>
                         </div>
-
-                        <div class="mt-4 flex justify-end">
-                            <button
-                                type="submit"
-                                onclick="return confirm('Yakin ingin menyelesaikan data penimbangan ini?')"
-                                class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700">
-                                Selesai Timbang
-                            </button>
-                        </div>
-                    </form>
-                    @elseif ($isCreator && $isFinished)
-                    <div class="mt-4 flex justify-end">
-                        <span class="inline-flex items-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700">
-                            ✓ Menunggu validasi
-                        </span>
-                    </div>
+                        @if ($isCreator)
+                            <div class="mt-4 flex justify-end">
+                                <span class="inline-flex items-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700">
+                                    ✓ Menunggu validasi
+                                </span>
+                            </div>
+                        @endif
                     @endif
                 </div>
             </div>

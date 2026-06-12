@@ -27,7 +27,8 @@
                         </x-slot>
 
                         <x-slot name="content">
-                            <div x-data="{ openBeras: false }" class="w-full">
+                            <div x-data="{ openBeras: false, openGabah: false }" class="w-full space-y-1">
+                                <!-- Beras -->
                                 <div class="relative">
                                     <button @click.stop="openBeras = !openBeras"
                                             class="w-full flex items-center justify-between px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 hover:text-gray-800">
@@ -44,7 +45,29 @@
                                          class="absolute left-full top-0 ms-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
                                         <div class="px-3 py-1">
                                             <x-dropdown-link href="{{ route('penerimaan_beras.index') }}" class="block w-full text-gray-700">Penerimaan Beras</x-dropdown-link>
-                                            <x-dropdown-link :href="route('beras.index')" class="block w-full text-gray-700">Bahan Baku Beras</x-dropdown-link>
+                                            <x-dropdown-link :href="route('bahan_baku_beras.index')" class="block w-full text-gray-700">Bahan Baku Beras</x-dropdown-link>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Gabah -->
+                                <div class="relative">
+                                    <button @click.stop="openGabah = !openGabah"
+                                            class="w-full flex items-center justify-between px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 hover:text-gray-800">
+                                        <span>Gabah</span>
+                                        <svg :class="{'rotate-180': openGabah}"
+                                             class="h-4 w-4 transform text-gray-500 transition-transform"
+                                             xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                        </svg>
+                                    </button>
+
+                                    <!-- Right flyout for desktop -->
+                                    <div x-show="openGabah" x-cloak
+                                         class="absolute left-full top-0 ms-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
+                                        <div class="px-3 py-1">
+                                            <x-dropdown-link href="{{ route('penerimaan_gabah.index') }}" class="block w-full text-gray-700">Penerimaan Gabah</x-dropdown-link>
+                                            <x-dropdown-link :href="route('bahan_baku_gabah.index')" class="block w-full text-gray-700">Bahan Baku Gabah</x-dropdown-link>
                                         </div>
                                     </div>
                                 </div>
@@ -100,7 +123,8 @@
         <div class="pt-2 pb-3 space-y-1">
             <!-- <div class="px-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Bahan Baku</div> -->
 
-            <div x-data="{ openBerasMobile: false }" class="space-y-1">
+            <div x-data="{ openBerasMobile: false, openGabahMobile: false }" class="space-y-1">
+                <!-- Beras -->
                 <button @click.stop="openBerasMobile = !openBerasMobile"
                         class="w-full flex items-center justify-between px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 hover:text-gray-800">
                     <span>Beras</span>
@@ -112,7 +136,22 @@
                 <div x-show="openBerasMobile" x-cloak class="space-y-1 ps-4">
                     <x-responsive-nav-link :href="route('penerimaan_beras.index')">Penerimaan Beras</x-responsive-nav-link>
                     
-                    <x-responsive-nav-link :href="route('beras.index')">Bahan Baku Beras</x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('bahan_baku_beras.index')">Bahan Baku Beras</x-responsive-nav-link>
+                </div>
+
+                <!-- Gabah -->
+                <button @click.stop="openGabahMobile = !openGabahMobile"
+                        class="w-full flex items-center justify-between px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 hover:text-gray-800">
+                    <span>Gabah</span>
+                    <svg :class="{'rotate-180': openGabahMobile}" class="h-4 w-4 transform text-gray-500 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                    </svg>
+                </button>
+
+                <div x-show="openGabahMobile" x-cloak class="space-y-1 ps-4">
+                    <x-responsive-nav-link :href="route('penerimaan_gabah.index')">Penerimaan Gabah</x-responsive-nav-link>
+                    
+                    <x-responsive-nav-link :href="route('bahan_baku_gabah.index')">Bahan Baku Gabah</x-responsive-nav-link>
                 </div>
             </div>
         </div>

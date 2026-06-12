@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Beras;
+use App\Models\Gabah;
 use App\Models\KriteriaBb;
-use App\Models\ReportTimbangBeras;
+use App\Models\ReportTimbangGabah;
 use App\Models\Pcustomer;
-use App\Models\TerimaBb;
+use App\Models\TerimaBg;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
-class PembagianBerasController extends Controller
+class PembagianGabahController extends Controller
 {
     private function buildNoPenerimaan(string $prefix, ?Carbon $tanggalTerima, int $sequenceNumber): string
     {
@@ -24,12 +24,12 @@ class PembagianBerasController extends Controller
 
     private function noPenerimaanPrefix(): string
     {
-        return DB::table('config')->where('id', 7)->value('value') ?? 'PB';
+        return DB::table('config')->where('id', 1)->value('value') ?? 'PG';
     }
 
     private function currentNoPenerimaanSequence(): int
     {
-        $rawSequence = DB::table('config')->where('id', 8)->value('value') ?? '0000';
+        $rawSequence = DB::table('config')->where('id', 2)->value('value') ?? '0000';
 
         return (int) preg_replace('/\D/', '', (string) $rawSequence);
     }
@@ -43,7 +43,7 @@ class PembagianBerasController extends Controller
     {
         $sequenceSuffix = substr(str_pad((string) max($sequenceNumber, 0), 4, '0', STR_PAD_LEFT), -4);
 
-        DB::table('config')->where('id', 8)->update(['value' => $sequenceSuffix]);
+        DB::table('config')->where('id', 2)->update(['value' => $sequenceSuffix]);
     }
 
     private function nextAvailableNoPenerimaan(?Carbon $tanggalTerima): string
@@ -55,10 +55,10 @@ class PembagianBerasController extends Controller
         );
     }
 
-    private function nextAvailableSortingNumber(int $terimaBbId): int
+    private function nextAvailableSortingNumber(int $terimaBgId): int
     {
-        $usedSortings = ReportTimbangBeras::query()
-            ->where('id_bahan', (string) $terimaBbId)
+        $usedSortings = ReportTimbangGabah::query()
+            ->where('id_bahan', (string) $terimaBgId)
             ->where('sorting', '>', 0)
             ->distinct()
             ->orderBy('sorting')
@@ -85,47 +85,36 @@ class PembagianBerasController extends Controller
 
     public function create(Request $request)
     {
-        $terimaBbId = $request->integer('terima_bb_id');
+        $terimaBgId = $request->integer('terima_bb_id');
 
-        $terimaBb = $terimaBbId
-            ? TerimaBb::query()->findOrFail($terimaBbId)
-            : TerimaBb::query()->orderByDesc('tgl_terima')->orderByDesc('id')->firstOrFail();
+        $terimaBg = $terimaBgId
+            ? TerimaBg::query()->findOrFail($terimaBgId)
+            : TerimaBg::query()->orderByDesc('tgl_terima')->orderByDesc('id')->firstOrFail();
 
-        // Get all timbang data for this terima_bb
-        $rows = ReportTimbangBeras::query()
-            ->where('id_bahan', (string) $terimaBb->id)
+        // Get all timbang data for this terima_bg
+        $rows = ReportTimbangGabah::query()
+            ->where('id_bahan', (string) $terimaBg->id)
             ->orderByRaw('CAST(timbang_ke AS UNSIGNED) ASC')
             ->get();
 
-        // Get all existing pembagian for this terima_bb
-        $existingPembagian = Beras::query()
-            ->where('id_timbang', $terimaBb->id)
+        // Get all existing pembagian for this terima_bg
+        $existingPembagian = Gabah::query()
+            ->where('id_timbang', $terimaBg->id)
             ->where('status', '!=', 'Cancel')
             ->orderBy('posttime', 'desc')
             ->get();
 
-        $tanggalTerima = filled($terimaBb->tgl_terima) ? Carbon::parse($terimaBb->tgl_terima) : null;
+        $tanggalTerima = filled($terimaBg->tgl_terima) ? Carbon::parse($terimaBg->tgl_terima) : null;
         $noPenerimaan = $this->nextAvailableNoPenerimaan($tanggalTerima);
 
-        $jenisBahan = strtolower(trim($terimaBb->jenis_bahan ?? ''));
-        $varietas = 'Beras Putih';
-
-        if ($jenisBahan === 'beras merah') {
-            $varietas = 'Beras Merah';
-        } elseif ($jenisBahan === 'beras ketan') {
-            $varietas = 'Beras Ketan';
-        } elseif (in_array($jenisBahan, ['w1', 'w2', 'w3', 'ir', 'jpn', 'w3/pw gempel', 'mapan-ir', 'ir wangi'], true)) {
-            $varietas = 'Beras Putih';
-        }
-
         $warnaOptions = KriteriaBb::query()
-            ->where('varietas', $varietas)
+            ->where('varietas', 'Gabah')
             ->where('jenis', 'Warna')
             ->orderBy('nilai')
             ->get();
 
         $aromaOptions = KriteriaBb::query()
-            ->where('varietas', $varietas)
+            ->where('varietas', 'Gabah')
             ->where('jenis', 'Aroma')
             ->orderBy('nilai')
             ->get();
@@ -145,10 +134,10 @@ class PembagianBerasController extends Controller
         }
 
         // Calculate next available sorting number
-        $nextSorting = $this->nextAvailableSortingNumber($terimaBb->id);
+        $nextSorting = $this->nextAvailableSortingNumber($terimaBg->id);
 
-        return view('pembagian_beras.create', [
-            'terimaBb' => $terimaBb,
+        return view('pembagian_gabah.create', [
+            'terimaBg' => $terimaBg,
             'rows' => $rows,
             'existingPembagian' => $existingPembagian,
             'noPenerimaan' => $noPenerimaan,
@@ -160,19 +149,19 @@ class PembagianBerasController extends Controller
 
     public function store(Request $request)
     {
-        Log::info('Pembagian Beras store request received', $request->all());
+        Log::info('Pembagian Gabah store request received', $request->all());
         
         try {
             $isEditRequest = $request->filled('editing_sorting_number');
 
             $rules = [
-                'terima_bb_id' => ['required', 'integer', 'exists:terima_bb,id'],
+                'terima_bb_id' => ['required', 'integer', 'exists:terima_bg,id'],
                 'kondisi_umum' => ['required', 'string', 'max:255'],
                 'kondisi_kendaraan' => ['required', 'string', 'max:255'],
                 'keputusan_penerimaan' => ['required', 'string', 'max:255'],
-                'sorter_beras' => ['required', 'in:Ya,Tidak'],
+                'sorter_gabah' => ['required', 'in:Ya,Tidak'],
                 'warna' => ['required', 'integer', 'exists:kriteria_bb,id'],
-                'aroma_beras' => ['required', 'integer', 'exists:kriteria_bb,id'],
+                'aroma_gabah' => ['required', 'integer', 'exists:kriteria_bb,id'],
                 'indikasi_kimia' => ['required', 'string', 'max:255'],
                 'catatan_cek' => ['required', 'string', 'max:255'],
                 'keterangan_penerimaan' => ['required', 'string', 'max:1000'],
@@ -185,20 +174,20 @@ class PembagianBerasController extends Controller
             if ($isEditRequest) {
                 $rules['total_qty_terpilih'] = ['nullable', 'numeric', 'min:0'];
                 $rules['selected_rows'] = ['nullable', 'array'];
-                $rules['selected_rows.*'] = ['integer', 'exists:report_timbang_beras,id'];
+                $rules['selected_rows.*'] = ['integer', 'exists:report_timbang_gabah,id'];
             } else {
                 $rules['total_qty_terpilih'] = ['required', 'numeric', 'gt:0'];
                 $rules['selected_rows'] = ['required', 'array', 'min:1'];
-                $rules['selected_rows.*'] = ['integer', 'exists:report_timbang_beras,id'];
+                $rules['selected_rows.*'] = ['integer', 'exists:report_timbang_gabah,id'];
             }
 
             $validated = $request->validate($rules);
             
             Log::info('Validation passed', $validated);
 
-            $terimaBb = TerimaBb::query()->findOrFail($validated['terima_bb_id']);
+            $terimaBg = TerimaBg::query()->findOrFail($validated['terima_bb_id']);
             
-            Log::info('Terima Bb found', ['id' => $terimaBb->id]);
+            Log::info('Terima Bg found', ['id' => $terimaBg->id]);
 
             $isEdit = !empty($validated['editing_sorting_number']);
             $noPenerimaan = '';
@@ -209,26 +198,18 @@ class PembagianBerasController extends Controller
                 Log::info('Edit mode', ['no_penerimaan' => $noPenerimaan, 'sorting_number' => $validated['editing_sorting_number']]);
             } else {
                 // Create mode - generate new no penerimaan
-                $tanggalTerima = filled($terimaBb->tgl_terima) ? Carbon::parse($terimaBb->tgl_terima) : null;
+                $tanggalTerima = filled($terimaBg->tgl_terima) ? Carbon::parse($terimaBg->tgl_terima) : null;
                 $noPenerimaan = $this->nextAvailableNoPenerimaan($tanggalTerima);
                 
                 Log::info('No Penerimaan generated', ['no_penerimaan' => $noPenerimaan]);
             }
 
-            $jenisBahan = strtolower(trim($terimaBb->jenis_bahan ?? ''));
-            $varietas = match (true) {
-                $jenisBahan === 'beras merah' => 'Beras Merah',
-                $jenisBahan === 'beras ketan' => 'Beras Ketan',
-                in_array($jenisBahan, ['w1', 'w2', 'w3', 'ir', 'jpn', 'w3/pw gempel', 'mapan-ir', 'ir wangi'], true) => 'Beras Putih',
-                default => 'Beras Putih',
-            };
-
             $kodePrincipal = Pcustomer::query()
-                ->where('kode_cust', $terimaBb->kode_supplier)
+                ->where('kode_cust', $terimaBg->kode_supplier)
                 ->value('kode_principal') ?? '';
 
             $warnaId = $validated['warna'] ?? null;
-            $aromaId = $validated['aroma_beras'] ?? null;
+            $aromaId = $validated['aroma_gabah'] ?? null;
 
             $userName = auth()->user()?->username ?? auth()->user()?->name ?? 'system';
             
@@ -244,15 +225,15 @@ class PembagianBerasController extends Controller
             if (empty($validated['selected_rows'])) {
                 if ($isEdit) {
                     DB::transaction(function () use (
-                        $terimaBb,
+                        $terimaBg,
                         $existingNoPenerimaan,
                         $validated,
                         $userName,
                         $updatedAt
                     ) {
                         $sortingNumber = $validated['editing_sorting_number'];
-                        $pembagianToDeleteQuery = Beras::query()
-                            ->where('id_timbang', $terimaBb->id)
+                        $pembagianToDeleteQuery = Gabah::query()
+                            ->where('id_timbang', $terimaBg->id)
                             ->where('status', '!=', 'Cancel');
 
                         if (filled($existingNoPenerimaan)) {
@@ -268,13 +249,13 @@ class PembagianBerasController extends Controller
                         if ($pembagianToDelete) {
                             $pembagianToDelete->update([
                                 'status' => 'Cancel',
-                                'last_action' => 'Cancel Pembagian Beras',
+                                'last_action' => 'Cancel Pembagian Gabah',
                                 'user_updated' => $userName,
                             ]);
                         }
 
-                        $clearQuery = ReportTimbangBeras::query()
-                            ->where('id_bahan', (string) $terimaBb->id);
+                        $clearQuery = ReportTimbangGabah::query()
+                            ->where('id_bahan', (string) $terimaBg->id);
 
                         if (filled($existingNoPenerimaan)) {
                             $clearQuery->where('no_penerimaan', $existingNoPenerimaan);
@@ -289,20 +270,16 @@ class PembagianBerasController extends Controller
                             'user_updated' => $userName,
                             'updated_at' => $updatedAt,
                         ]);
-
-                        // Do not rollback sequence number so the receipt number is not reused
-                        // $currentSequence = $this->currentNoPenerimaanSequence();
-                        // $this->syncNoPenerimaanSequence(max($currentSequence - 1, 0));
                     });
 
                     return response()->json([
                         'success' => true,
-                        'message' => 'Data pembagian beras berhasil dihapus.',
+                        'message' => 'Data pembagian gabah berhasil dihapus.',
                         'data' => [
                             'pembagian' => null,
                             'no_penerimaan' => $noPenerimaan,
-                            'next_no_penerimaan' => $this->nextAvailableNoPenerimaan($terimaBb->tgl_terima ? Carbon::parse($terimaBb->tgl_terima) : null),
-                            'next_sorting' => $this->nextAvailableSortingNumber($terimaBb->id),
+                            'next_no_penerimaan' => $this->nextAvailableNoPenerimaan($terimaBg->tgl_terima ? Carbon::parse($terimaBg->tgl_terima) : null),
+                            'next_sorting' => $this->nextAvailableSortingNumber($terimaBg->id),
                         ],
                     ]);
                 }
@@ -315,7 +292,7 @@ class PembagianBerasController extends Controller
 
             DB::transaction(function () use (
                 &$savedPembagian,
-                $terimaBb,
+                $terimaBg,
                 $validated,
                 $noPenerimaan,
                 $existingNoPenerimaan,
@@ -333,95 +310,56 @@ class PembagianBerasController extends Controller
                 if (!$isEdit) {
                     $this->syncNoPenerimaanSequence($this->nextNoPenerimaanSequence());
                 }
-
-                // Fetch selected timbangan rows to calculate average Kadar Air & Broken
-                $timbangRows = ReportTimbangBeras::query()->whereIn('id', $selectedRowIds)->get();
-                $avgAir = $timbangRows->avg('kadar_air') ?? 0;
-                $avgBroken = $timbangRows->avg('kadar_broken') ?? 0;
-
-                // Kadar Air score mapping
-                $airScore = 0;
-                if ($timbangRows->isNotEmpty()) {
-                    if ($avgAir <= 13.0) $airScore = 4;
-                    elseif ($avgAir <= 14.0) $airScore = 3;
-                    elseif ($avgAir <= 14.5) $airScore = 2;
-                    else $airScore = 1;
-                }
-
-                // Broken score mapping
-                $brokenScore = 0;
-                if ($timbangRows->isNotEmpty()) {
-                    if ($avgBroken <= 10.0) $brokenScore = 4;
-                    elseif ($avgBroken <= 20.0) $brokenScore = 3;
-                    elseif ($avgBroken <= 30.0) $brokenScore = 2;
-                    else $brokenScore = 1;
-                }
-
-                // Warna score
-                $warnaNilai = KriteriaBb::query()->where('id', $warnaId)->value('nilai') ?? 0;
-                $catatanCek = trim($validated['catatan_cek'] ?? '');
-                $hasDefect = ($catatanCek !== '' && $catatanCek !== '-');
-                $warnaScore = ($warnaNilai > 0) ? ($hasDefect ? max(1, $warnaNilai - 1) : $warnaNilai) : 0;
-
-                // Aroma score
-                $aromaScore = KriteriaBb::query()->where('id', $aromaId)->value('nilai') ?? 0;
-
-                // Calculate final score
-                $finalScoreStr = '';
-                if ($timbangRows->isNotEmpty() && $warnaNilai > 0 && $aromaScore > 0) {
-                    $finalScore = ($airScore + $brokenScore + $warnaScore + $aromaScore) / 4;
-                    $finalScoreStr = number_format($finalScore, 2);
-                }
                 
                 $dataToSave = [
                     'no_penerimaan' => $noPenerimaan,
-                    'tanggal' => $terimaBb->tgl_terima,
-                    'supplier' => $terimaBb->nama_supplier,
-                    'id_jenis' => (string) $terimaBb->id_jenis,
-                    'jenis' => $terimaBb->jenis_bahan,
+                    'tanggal' => $terimaBg->tgl_terima,
+                    'supplier' => $terimaBg->nama_supplier,
+                    'id_jenis' => (string) $terimaBg->id_jenis,
+                    'jenis' => $terimaBg->jenis_bahan,
                     'no_sample' => '',
                     'kode_principal' => $kodePrincipal,
                     'berat' => $validated['total_qty_terpilih'] ?? 0,
                     'stok' => $validated['total_qty_terpilih'] ?? 0,
-                    'kemasan' => $terimaBb->kemasan_pakai,
+                    'kemasan' => null, // TerimaBg does not have kemasan_pakai
                     'kondisi' => $validated['kondisi_umum'] ?? '',
                     'kendaraan' => $validated['kondisi_kendaraan'] ?? '',
                     'keputusan' => $validated['keputusan_penerimaan'] ?? '',
-                    'nopol' => $terimaBb->nopol,
+                    'nopol' => $terimaBg->nopol,
                     'status' => 'Proses',
                     'user' => $userName,
-                    'keterangan' => $validated['keterangan_penerimaan'] ?? '',
-                    'sorter' => $validated['sorter_beras'] === 'Ya' ? 1 : 0,
-                    'penggunaan_palet' => $terimaBb->penggunaan_palet,
-                    'lokasi_penyimpanan' => $terimaBb->tempat_simpan,
-                    'nilai' => $finalScoreStr,
+                    'keterangan' => $validated['catatan_cek'] ?? '',
+                    'sorter' => $validated['sorter_gabah'] === 'Ya' ? 1 : 0,
+                    'penggunaan_palet' => $terimaBg->penggunaan_palet,
+                    'lokasi_penyimpanan' => $terimaBg->tempat_simpan,
+                    'nilai' => '',
                     'harga' => $validated['harga'] ?? '',
-                    'id_timbang' => $terimaBb->id,
+                    'id_timbang' => $terimaBg->id,
                     'posttime' => now(),
                     'warna' => $warnaId,
                     'aroma' => $aromaId,
                     'indikasi_kimia' => $validated['indikasi_kimia'] ?? '',
-                    'catatan_cek' => $validated['catatan_cek'] ?? '',
+                    'catatan_cek' => $validated['keterangan_penerimaan'] ?? '',
                     'user_approve' => '',
                     'harga_rata' => '',
                     'posttime_harga' => '',
                     'poles' => 0,
                     'pecah_kulit' => 0,
                     'user_updated' => $isEdit ? $userName : '',
-                    'last_action' => $isEdit ? 'Update Pembagian Beras' : 'Pembagian Beras',
+                    'last_action' => $isEdit ? 'Update Pembagian Gabah' : 'Pembagian Gabah',
                 ];
                 
                 if ($isEdit) {
                     // Edit mode - get pembagian list and update the one at sorting index
-                    $pembagianList = Beras::query()
-                        ->where('id_timbang', $terimaBb->id)
+                    $pembagianList = Gabah::query()
+                        ->where('id_timbang', $terimaBg->id)
                         ->where('status', '!=', 'Cancel')
                         ->orderBy('posttime', 'asc')
                         ->get();
                         
                     $sortingNumber = $validated['editing_sorting_number'];
-                    $pembagianToUpdate = Beras::query()
-                        ->where('id_timbang', $terimaBb->id)
+                    $pembagianToUpdate = Gabah::query()
+                        ->where('id_timbang', $terimaBg->id)
                         ->where('no_penerimaan', $noPenerimaan)
                         ->first();
 
@@ -438,18 +376,18 @@ class PembagianBerasController extends Controller
 
                         $pembagianToUpdate->update($dataToSave);
                         $savedPembagian = $pembagianToUpdate;
-                        Log::info('Beras record updated', ['id' => $savedPembagian->idb_beras]);
+                        Log::info('Gabah record updated', ['id' => $savedPembagian->id]);
                     } else {
-                        Log::warning('No existing Beras record found for edit', [
-                            'id_timbang' => $terimaBb->id,
+                        Log::warning('No existing Gabah record found for edit', [
+                            'id_timbang' => $terimaBg->id,
                             'no_penerimaan' => $noPenerimaan,
                             'sorting_number' => $sortingNumber,
                         ]);
                     }
                     
                     // First, clear sorting and no_penerimaan from all report timbang for this sorting number
-                    ReportTimbangBeras::query()
-                        ->where('id_bahan', (string) $terimaBb->id)
+                    ReportTimbangGabah::query()
+                        ->where('id_bahan', (string) $terimaBg->id)
                         ->where('sorting', $sortingNumber)
                         ->update([
                             'sorting' => 0,
@@ -463,17 +401,17 @@ class PembagianBerasController extends Controller
                     $dataToSave['user_approve'] = '';
                     $dataToSave['harga_rata'] = '';
                     $dataToSave['posttime_harga'] = '';
-                    $savedPembagian = Beras::create($dataToSave);
-                    Log::info('Beras record created', ['id' => $savedPembagian->idb_beras]);
+                    $savedPembagian = Gabah::create($dataToSave);
+                    Log::info('Gabah record created', ['id' => $savedPembagian->id]);
                 }
 
                 // Update selected report timbang rows with sorting number
-                $sortingNumberToUse = $isEdit ? $validated['editing_sorting_number'] : $this->nextAvailableSortingNumber($terimaBb->id);
+                $sortingNumberToUse = $isEdit ? $validated['editing_sorting_number'] : $this->nextAvailableSortingNumber($terimaBg->id);
                 $noPenerimaanToUse = $isEdit ? $existingNoPenerimaan : $noPenerimaan;
 
                 if ($isEdit) {
-                    $clearQuery = ReportTimbangBeras::query()
-                        ->where('id_bahan', (string) $terimaBb->id);
+                    $clearQuery = ReportTimbangGabah::query()
+                        ->where('id_bahan', (string) $terimaBg->id);
 
                     if (filled($existingNoPenerimaan)) {
                         $clearQuery->where('no_penerimaan', $existingNoPenerimaan);
@@ -493,7 +431,7 @@ class PembagianBerasController extends Controller
                 if (!empty($validated['selected_rows'])) {
                     Log::info('Updating selected rows', ['rows' => $validated['selected_rows'], 'sorting_number' => $sortingNumberToUse]);
 
-                    ReportTimbangBeras::query()
+                    ReportTimbangGabah::query()
                         ->whereIn('id', $validated['selected_rows'])
                         ->update([
                             'sorting' => $sortingNumberToUse,
@@ -507,8 +445,8 @@ class PembagianBerasController extends Controller
                     Log::info('Selected rows updated');
 
                     if ($isEdit) {
-                        ReportTimbangBeras::query()
-                            ->where('id_bahan', (string) $terimaBb->id)
+                        ReportTimbangGabah::query()
+                            ->where('id_bahan', (string) $terimaBg->id)
                             ->where(function ($query) use ($existingNoPenerimaan, $sortingNumberToUse) {
                                 if (filled($existingNoPenerimaan)) {
                                     $query->where('no_penerimaan', $existingNoPenerimaan);
@@ -527,8 +465,8 @@ class PembagianBerasController extends Controller
                     }
                 }
 
-                ReportTimbangBeras::query()
-                    ->where('id_bahan', (string) $terimaBb->id)
+                ReportTimbangGabah::query()
+                    ->where('id_bahan', (string) $terimaBg->id)
                     ->where('sorting', 0)
                     ->where(function ($query) {
                         $query->whereNull('no_penerimaan')
@@ -546,29 +484,29 @@ class PembagianBerasController extends Controller
             Log::info('Transaction completed successfully');
 
             $nextNoPenerimaan = $this->nextAvailableNoPenerimaan(
-                $terimaBb->tgl_terima ? Carbon::parse($terimaBb->tgl_terima) : null
+                $terimaBg->tgl_terima ? Carbon::parse($terimaBg->tgl_terima) : null
             );
 
             // Return JSON response for AJAX
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => $isEdit ? 'Data pembagian beras berhasil diperbarui.' : 'Data pembagian beras berhasil disimpan.',
+                    'message' => $isEdit ? 'Data pembagian gabah berhasil diperbarui.' : 'Data pembagian gabah berhasil disimpan.',
                     'data' => [
                         'pembagian' => $savedPembagian,
                         'no_penerimaan' => $noPenerimaan,
                         'next_no_penerimaan' => $nextNoPenerimaan,
-                        'next_sorting' => $this->nextAvailableSortingNumber($terimaBb->id),
+                        'next_sorting' => $this->nextAvailableSortingNumber($terimaBg->id),
                     ],
                 ]);
             }
 
             return redirect()
-                ->route('pembagian_beras.create', ['terima_bb_id' => $terimaBb->id])
-                ->with('success', $isEdit ? 'Data pembagian beras berhasil diperbarui.' : 'Data pembagian beras berhasil disimpan.');
+                ->route('pembagian_gabah.create', ['terima_bb_id' => $terimaBg->id])
+                ->with('success', $isEdit ? 'Data pembagian gabah berhasil diperbarui.' : 'Data pembagian gabah berhasil disimpan.');
                 
         } catch (\Exception $e) {
-            Log::error('Error in Pembagian Beras store', [
+            Log::error('Error in Pembagian Gabah store', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'request' => $request->all(),
@@ -585,12 +523,12 @@ class PembagianBerasController extends Controller
         }
     }
 
-    public function getRincian($terimaBbId)
+    public function getRincian($terimaBgId)
     {
-        $terimaBb = TerimaBb::query()->findOrFail($terimaBbId);
+        $terimaBg = TerimaBg::query()->findOrFail($terimaBgId);
         
-        $rows = ReportTimbangBeras::query()
-            ->where('id_bahan', (string) $terimaBb->id)
+        $rows = ReportTimbangGabah::query()
+            ->where('id_bahan', (string) $terimaBg->id)
             ->orderByRaw('CAST(timbang_ke AS UNSIGNED) ASC')
             ->get();
 
@@ -616,13 +554,13 @@ class PembagianBerasController extends Controller
         ]);
     }
     
-    public function getPembagianDetail($terimaBbId, $sortingNumber)
+    public function getPembagianDetail($terimaBgId, $sortingNumber)
     {
-        $terimaBb = TerimaBb::query()->findOrFail($terimaBbId);
+        $terimaBg = TerimaBg::query()->findOrFail($terimaBgId);
         
-        // Get all pembagian for this terima_bb
-        $pembagianList = Beras::query()
-            ->where('id_timbang', $terimaBb->id)
+        // Get all pembagian for this terima_bg
+        $pembagianList = Gabah::query()
+            ->where('id_timbang', $terimaBg->id)
             ->where('status', '!=', 'Cancel')
             ->orderBy('posttime', 'asc')
             ->get();
@@ -638,8 +576,8 @@ class PembagianBerasController extends Controller
         $pembagian = $pembagianList[$sortingNumber - 1];
         
         // Get selected report timbang rows for this pembagian
-        $selectedRowsQuery = ReportTimbangBeras::query()
-            ->where('id_bahan', (string) $terimaBb->id)
+        $selectedRowsQuery = ReportTimbangGabah::query()
+            ->where('id_bahan', (string) $terimaBg->id)
             ->where('sorting', $sortingNumber);
 
         $selectedRows = $selectedRowsQuery->pluck('id')->toArray();
@@ -660,28 +598,28 @@ class PembagianBerasController extends Controller
 
     public function check($id)
     {
-        $record = TerimaBb::query()->findOrFail($id);
+        $record = TerimaBg::query()->findOrFail($id);
         $currentUser = auth()->user()?->username ?: auth()->user()?->name;
 
         // Verify that all pembagian are filled
-        $hasTimbangan = ReportTimbangBeras::where('id_bahan', (string) $record->id)->exists();
-        $hasUnsorted = ReportTimbangBeras::where('id_bahan', (string) $record->id)->where('sorting', 0)->exists();
+        $hasTimbangan = ReportTimbangGabah::where('id_bahan', (string) $record->id)->exists();
+        $hasUnsorted = ReportTimbangGabah::where('id_bahan', (string) $record->id)->where('sorting', 0)->exists();
 
         if (!$hasTimbangan || $hasUnsorted) {
             return redirect()
-                ->route('pembagian_beras.create', ['terima_bb_id' => $record->id])
-                ->with('error', 'Pembagian beras belum selesai diisi.');
+                ->route('pembagian_gabah.create', ['terima_bb_id' => $record->id])
+                ->with('error', 'Pembagian gabah belum selesai diisi.');
         }
 
         DB::transaction(function () use ($record, $currentUser) {
             $record->update([
                 'status' => 'Checked',
-                'last_action' => 'Check Pembagian Beras',
+                'last_action' => 'Check Pembagian Gabah',
                 'user_updated' => $currentUser,
                 'updated_at' => now(),
             ]);
 
-            Beras::where('id_timbang', $record->id)
+            Gabah::where('id_timbang', $record->id)
                 ->where('status', '!=', 'Cancel')
                 ->update([
                     'status' => 'Finish',
@@ -690,7 +628,7 @@ class PembagianBerasController extends Controller
         });
 
         return redirect()
-            ->route('penerimaan_beras.index')
-            ->with('success', 'Data pembagian beras berhasil di-check.');
+            ->route('penerimaan_gabah.index')
+            ->with('success', 'Data pembagian gabah berhasil di-check.');
     }
 }
